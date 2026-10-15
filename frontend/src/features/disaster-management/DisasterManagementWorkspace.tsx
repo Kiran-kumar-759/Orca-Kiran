@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { AlertTriangle, ShieldAlert, History } from "lucide-react";
 import { InvestigationInput } from "../investigations/InvestigationInput";
 import { FindingsList } from "../investigations/FindingsList";
 import { InvestigationEventsTimeline } from "../investigations/InvestigationEventsTimeline";
@@ -8,7 +8,14 @@ import { MarineChart } from "../../components/charts/MarineChart";
 import { VerificationBadge } from "../../components/evidence/VerificationBadge";
 import { EvidenceDrawer } from "../../components/evidence/EvidenceDrawer";
 import { apiClient } from "../../lib/api-client";
-import { InvestigationResponse, ExecutionEvent, EvidenceRecord, InvestigationCreate } from "../../types";
+import {
+  InvestigationResponse,
+  ExecutionEvent,
+  EvidenceRecord,
+  InvestigationCreate,
+  Hazard,
+} from "../../types";
+import { formatDateTime } from "../../lib/utils";
 
 export const DisasterManagementWorkspace: React.FC = () => {
   const [investigation, setInvestigation] = useState<InvestigationResponse | null>(null);
@@ -18,13 +25,29 @@ export const DisasterManagementWorkspace: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
 
-  const cycloneWindData = [
-    { time: "May 14 00:00", value: 45 },
-    { time: "May 15 06:00", value: 70 },
-    { time: "May 16 12:00", value: 105 },
-    { time: "May 17 18:00", value: 115 },
-    { time: "May 18 12:00", value: 85 },
-  ];
+  // Real backend hazard state
+  const [hazards, setHazards] = useState<Hazard[]>([]);
+  const [selectedHazard, setSelectedHazard] = useState<Hazard | null>(null);
+  const [isLoadingHazards, setIsLoadingHazards] = useState(true);
+
+  // Load real backend hazard data on mount
+  useEffect(() => {
+    setIsLoadingHazards(true);
+    apiClient
+      .getHazards({ basin: "arabian_sea", limit: 10 })
+      .then((res) => {
+        setHazards(res.items);
+        if (res.items.length > 0) {
+          setSelectedHazard(res.items[0]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load hazards from backend:", err);
+      })
+      .finally(() => {
+        setIsLoadingHazards(false);
+      });
+  }, []);
 
   const handleStartInvestigation = async (payload: InvestigationCreate) => {
     setIsLoading(true);
@@ -51,8 +74,35 @@ export const DisasterManagementWorkspace: React.FC = () => {
     }
   };
 
+  // Convert real track points to chart time-series
+  const chartData = selectedHazard?.track_points
+    ?.filter((pt) => pt.wind_speed_knots !== null && pt.wind_speed_knots !== undefined)
+    ?.map((pt) => ({
+      time: new Date(pt.time).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+      }),
+      value: pt.wind_speed_knots || 0,
+      secondary: pt.pressure_hpa || 0,
+    })) || [];
+
+  // Downsample track points to 6-10 significant markers for the map
+  const mapMarkers = (selectedHazard?.track_points || [])
+    .filter((_, idx, arr) => idx === 0 || idx === arr.length - 1 || idx % Math.max(1, Math.floor(arr.length / 6)) === 0)
+    .map((pt) => ({
+      lat: pt.latitude,
+      lon: pt.longitude,
+      label: `${selectedHazard?.name?.replace("Cyclone ", "") || "Storm"} (${pt.wind_speed_knots || 0} kts)`,
+      type: "cyclone" as const,
+    }));
+
+  const mapCenterLat = mapMarkers.length > 0 ? mapMarkers[Math.floor(mapMarkers.length / 2)].lat : 14.5;
+  const mapCenterLon = mapMarkers.length > 0 ? mapMarkers[Math.floor(mapMarkers.length / 2)].lon : 72.5;
+
   return (
     <div className="space-y-6">
+      {/* Workspace Banner */}
       <div className="p-5 rounded-2xl border border-orca-border bg-gradient-to-r from-orca-navy to-rose-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 text-rose-400 text-xs font-semibold uppercase tracking-wider mb-1">
@@ -73,33 +123,71 @@ export const DisasterManagementWorkspace: React.FC = () => {
         )}
       </div>
 
+      {/* Query Bar */}
       <InvestigationInput
         workspace="disaster-management"
-        defaultQuery="Investigate the latest available cyclone information relevant to the Arabian Sea, identify exposed coastal areas, and explain what remains uncertain."
-        defaultLocation={{ latitude: 14.5, longitude: 71.8, name: "Arabian Sea Cyclone Corridor" }}
+        defaultQuery="Investigate cyclone tracks relevant to the Arabian Sea and evaluate proximity to Karnataka coastal ports."
+        defaultLocation={{ latitude: 13.0, longitude: 74.0, name: "Arabian Sea Coastal Corridor" }}
         onStartInvestigation={handleStartInvestigation}
         isLoading={isLoading}
       />
 
+      {/* Real Storm Selector & Provenance Header */}
+      <div className="p-4 rounded-xl border border-orca-border bg-orca-navy/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center space-x-2">
+          <History className="w-4 h-4 text-cyan-400" />
+          <span className="font-semibold text-slate-200">Loaded Cyclone Trajectory:</span>
+          {isLoadingHazards ? (
+            <span className="text-orca-muted animate-pulse">Loading verified tracks from backend...</span>
+          ) : hazards.length > 0 ? (
+            <select
+              value={selectedHazard?.hazard_id}
+              onChange={(e) => {
+                const h = hazards.find((item) => item.hazard_id === e.target.value);
+                if (h) setSelectedHazard(h);
+              }}
+              className="bg-orca-dark border border-orca-border px-3 py-1.5 rounded-lg text-cyan-300 font-medium focus:outline-none focus:border-cyan-400"
+            >
+              {hazards.map((h) => (
+                <option key={h.hazard_id} value={h.hazard_id}>
+                  {h.name} ({h.track_points.length} points)
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="text-amber-400">No hazard records currently in database.</span>
+          )}
+        </div>
+
+        {selectedHazard && (
+          <div className="flex items-center space-x-4 text-orca-muted">
+            <span>
+              Period: {formatDateTime(selectedHazard.first_observed)} → {formatDateTime(selectedHazard.last_observed)}
+            </span>
+            <span className="px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/40">
+              Source: {selectedHazard.source}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Map & Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <OceanMap
-          latitude={14.5}
-          longitude={71.8}
-          title="Cyclone Track Trajectory & Coastline Intersection"
-          markers={[
-            { lat: 12.2, lon: 72.8, label: "Tauktae Pt 1 (70 kts)", type: "cyclone" },
-            { lat: 14.5, lon: 71.8, label: "Tauktae Pt 2 (105 kts)", type: "cyclone" },
-            { lat: 19.2, lon: 71.2, label: "Tauktae Pt 3 (115 kts)", type: "cyclone" },
-          ]}
+          latitude={mapCenterLat}
+          longitude={mapCenterLon}
+          title={`Chronological Track: ${selectedHazard?.name || "Arabian Sea Cyclone"}`}
+          markers={mapMarkers}
         />
         <MarineChart
-          title="Historical Cyclone Peak Sustained Wind Speed (knots)"
-          data={cycloneWindData}
+          title={`NOAA IBTrACS Sustained Wind Speed (knots) — ${selectedHazard?.name || "Storm Progression"}`}
+          data={chartData}
           unit="knots"
           primaryName="Sustained Wind"
         />
       </div>
 
+      {/* Findings, Report & Events */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <FindingsList
@@ -123,11 +211,26 @@ export const DisasterManagementWorkspace: React.FC = () => {
           )}
         </div>
 
-        <div>
+        <div className="space-y-4">
           <InvestigationEventsTimeline events={events} />
+
+          {investigation?.limitations && investigation.limitations.length > 0 && (
+            <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-950/20 text-xs text-amber-200 space-y-1.5">
+              <div className="flex items-center space-x-1 font-semibold text-amber-300">
+                <ShieldAlert className="w-4 h-4" />
+                <span>Disclosures & Known Limitations</span>
+              </div>
+              <ul className="list-disc pl-4 space-y-1 text-[11px] text-amber-300/90">
+                {investigation.limitations.map((lim, i) => (
+                  <li key={i}>{lim}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Evidence Drawer */}
       <EvidenceDrawer
         evidence={selectedEvidence}
         onClose={() => setSelectedEvidence(null)}
