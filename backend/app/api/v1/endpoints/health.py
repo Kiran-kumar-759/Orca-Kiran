@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
-from fastapi import APIRouter
+from datetime import UTC, datetime
+
 from app.core.config import settings
+from fastapi import APIRouter
 
 router = APIRouter()
 
@@ -15,8 +16,10 @@ async def check_health():
         "providers": {
             "groq": "configured" if bool(settings.GROQ_API_KEY) else "unconfigured",
             "gemini": "configured" if bool(settings.GEMINI_API_KEY) else "unconfigured",
-            "openrouter": "configured" if bool(settings.OPENROUTER_API_KEY) else "unconfigured",
+            "openrouter": "configured"
+            if bool(settings.OPENROUTER_API_KEY)
+            else "unconfigured",
         },
         "database": "postgresql+psycopg",
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(UTC).isoformat(),
     }

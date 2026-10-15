@@ -1,10 +1,7 @@
-from typing import Optional
 from app.providers.llm.base import LLMProvider
-from app.providers.llm.groq import GroqProvider
 from app.providers.llm.gemini import GeminiProvider
+from app.providers.llm.groq import GroqProvider
 from app.providers.llm.openrouter import OpenRouterProvider
-from app.core.config import settings
-from app.core.logging import logger
 
 _providers: list[LLMProvider] = [
     GroqProvider(),
@@ -13,7 +10,7 @@ _providers: list[LLMProvider] = [
 ]
 
 
-async def get_active_llm_provider() -> Optional[LLMProvider]:
+async def get_active_llm_provider() -> LLMProvider | None:
     """
     Returns the first configured LLM provider according to priority:
     1. Groq
@@ -28,9 +25,9 @@ async def get_active_llm_provider() -> Optional[LLMProvider]:
 
 
 __all__ = [
-    "LLMProvider",
-    "GroqProvider",
     "GeminiProvider",
+    "GroqProvider",
+    "LLMProvider",
     "OpenRouterProvider",
     "get_active_llm_provider",
 ]

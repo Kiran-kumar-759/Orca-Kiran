@@ -1,8 +1,6 @@
-from typing import Optional
 import httpx
-from app.providers.llm.base import LLMProvider
 from app.core.config import settings
-from app.core.logging import logger
+from app.providers.llm.base import LLMProvider
 
 
 class GroqProvider(LLMProvider):
@@ -12,10 +10,7 @@ class GroqProvider(LLMProvider):
         return bool(settings.GROQ_API_KEY and settings.GROQ_API_KEY.strip())
 
     async def generate_response(
-        self,
-        prompt: str,
-        system_prompt: Optional[str] = None,
-        temperature: float = 0.1
+        self, prompt: str, system_prompt: str | None = None, temperature: float = 0.1
     ) -> str:
         if not await self.is_configured():
             raise ValueError("Groq API key is not configured.")
@@ -23,7 +18,7 @@ class GroqProvider(LLMProvider):
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         messages = []
         if system_prompt:
@@ -33,7 +28,7 @@ class GroqProvider(LLMProvider):
         payload = {
             "model": "llama-3.3-70b-versatile",
             "messages": messages,
-            "temperature": temperature
+            "temperature": temperature,
         }
 
         async with httpx.AsyncClient(timeout=settings.LLM_TIMEOUT_SECONDS) as client:

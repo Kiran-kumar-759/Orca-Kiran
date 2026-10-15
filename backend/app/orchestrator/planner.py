@@ -1,11 +1,12 @@
-from typing import List
+from typing import ClassVar
+
 from app.schemas.investigation import InvestigationCreate
 
 
 class InvestigationPlanner:
     """Plans specialist agent selection based on workspace context and user query."""
 
-    WORKSPACE_AGENT_MAPPING = {
+    WORKSPACE_AGENT_MAPPING: ClassVar[dict[str, list[str]]] = {
         "fisherman": ["ocean_research", "marine_hazard"],
         "marine_monitoring": ["ocean_research"],
         "protected_areas": ["ocean_research", "coastal_risk"],
@@ -13,7 +14,7 @@ class InvestigationPlanner:
         "disaster_management": ["marine_hazard", "coastal_risk"],
     }
 
-    def plan_agents(self, request: InvestigationCreate) -> List[str]:
+    def plan_agents(self, request: InvestigationCreate) -> list[str]:
         if request.preferred_agents:
             return request.preferred_agents
 
@@ -25,11 +26,20 @@ class InvestigationPlanner:
 
         # If query contains explicit keywords, dynamically expand
         q = request.query.lower()
-        if any(w in q for w in ["cyclone", "storm", "hurricane", "typhoon"]) and "marine_hazard" not in agents:
+        if (
+            any(w in q for w in ["cyclone", "storm", "hurricane", "typhoon"])
+            and "marine_hazard" not in agents
+        ):
             agents.append("marine_hazard")
-        if any(w in q for w in ["population", "settlement", "infrastructure", "port"]) and "coastal_risk" not in agents:
+        if (
+            any(w in q for w in ["population", "settlement", "infrastructure", "port"])
+            and "coastal_risk" not in agents
+        ):
             agents.append("coastal_risk")
-        if any(w in q for w in ["sst", "temperature", "wave", "chlorophyll"]) and "ocean_research" not in agents:
+        if (
+            any(w in q for w in ["sst", "temperature", "wave", "chlorophyll"])
+            and "ocean_research" not in agents
+        ):
             agents.append("ocean_research")
 
         return agents

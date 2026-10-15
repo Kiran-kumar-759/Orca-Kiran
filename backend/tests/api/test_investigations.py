@@ -5,8 +5,8 @@ def test_investigation_creation_and_execution_lifecycle(client):
         "location": {
             "latitude": 12.91,
             "longitude": 74.85,
-            "name": "Offshore Mangaluru"
-        }
+            "name": "Offshore Mangaluru",
+        },
     }
     response = client.post("/api/v1/investigations", json=payload)
     assert response.status_code == 201

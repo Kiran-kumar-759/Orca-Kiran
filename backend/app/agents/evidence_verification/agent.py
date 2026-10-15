@@ -1,9 +1,16 @@
-from datetime import datetime, timezone
-from typing import Optional
 from app.agents.base import SpecialistAgent
-from app.schemas.investigation import InvestigationTask, AgentResult, AgentExecutionStatus
-from app.schemas.evidence import Finding, EvidenceRecord, VerificationState, VerificationResult
 from app.core.logging import logger
+from app.schemas.evidence import (
+    EvidenceRecord,
+    Finding,
+    VerificationResult,
+    VerificationState,
+)
+from app.schemas.investigation import (
+    AgentExecutionStatus,
+    AgentResult,
+    InvestigationTask,
+)
 
 
 class EvidenceVerificationAgent(SpecialistAgent):
@@ -12,20 +19,22 @@ class EvidenceVerificationAgent(SpecialistAgent):
     description: str = "Evaluate findings against referenced evidence records, audit provenance, and assign verification states."
 
     async def run(self, task: InvestigationTask) -> AgentResult:
-        logger.info(f"[{self.agent_id}] Running verification audit for task {task.investigation_id}")
+        logger.info(
+            f"[{self.agent_id}] Running verification audit for task {task.investigation_id}"
+        )
         return AgentResult(
             agent_id=self.agent_id,
             status=AgentExecutionStatus.COMPLETED,
             findings=[],
             evidence=[],
-            limitations=["Verification is bounded by the precision and availability of ingested source metadata."],
-            errors=[]
+            limitations=[
+                "Verification is bounded by the precision and availability of ingested source metadata."
+            ],
+            errors=[],
         )
 
     def verify_findings(
-        self,
-        findings: list[Finding],
-        evidence_pool: list[EvidenceRecord]
+        self, findings: list[Finding], evidence_pool: list[EvidenceRecord]
     ) -> VerificationResult:
         """
         Deterministic verification logic:
@@ -39,22 +48,28 @@ class EvidenceVerificationAgent(SpecialistAgent):
         details = []
 
         for finding in findings:
-            missing_ids = [eid for eid in finding.evidence_ids if eid not in evidence_map]
-            
+            missing_ids = [
+                eid for eid in finding.evidence_ids if eid not in evidence_map
+            ]
+
             if not finding.evidence_ids or missing_ids:
                 unverified_count += 1
-                details.append({
-                    "finding_id": finding.id,
-                    "state": VerificationState.UNVERIFIED.value,
-                    "reason": f"Missing or unresolvable evidence IDs: {missing_ids or 'No evidence cited'}"
-                })
+                details.append(
+                    {
+                        "finding_id": finding.id,
+                        "state": VerificationState.UNVERIFIED.value,
+                        "reason": f"Missing or unresolvable evidence IDs: {missing_ids or 'No evidence cited'}",
+                    }
+                )
             else:
                 verified_count += 1
-                details.append({
-                    "finding_id": finding.id,
-                    "state": VerificationState.VERIFIED.value,
-                    "reason": f"Successfully resolved against evidence: {finding.evidence_ids}"
-                })
+                details.append(
+                    {
+                        "finding_id": finding.id,
+                        "state": VerificationState.VERIFIED.value,
+                        "reason": f"Successfully resolved against evidence: {finding.evidence_ids}",
+                    }
+                )
 
         if unverified_count == 0 and verified_count > 0:
             overall = VerificationState.VERIFIED
@@ -74,5 +89,5 @@ class EvidenceVerificationAgent(SpecialistAgent):
             verified_claims_count=verified_count,
             unverified_claims_count=unverified_count,
             notes=notes,
-            details=details
+            details=details,
         )

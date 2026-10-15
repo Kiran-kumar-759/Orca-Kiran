@@ -1,34 +1,38 @@
-from datetime import datetime, timezone
-from typing import Optional, Dict
 import uuid
+from datetime import UTC, datetime
 
+from app.agents.base import SpecialistAgent
+from app.agents.coastal_risk.agent import CoastalRiskAgent
+from app.agents.evidence_verification.agent import EvidenceVerificationAgent
+from app.agents.marine_hazard.agent import MarineHazardAgent
+from app.agents.ocean_research.agent import OceanResearchAgent
+from app.core.logging import logger
+from app.orchestrator.events import EventBus, global_event_bus
+from app.orchestrator.planner import InvestigationPlanner
+from app.schemas.evidence import (
+    EvidenceRecord,
+    Finding,
+    VerificationResult,
+    VerificationState,
+)
 from app.schemas.investigation import (
+    AgentResult,
+    EventType,
     InvestigationCreate,
     InvestigationResponse,
     InvestigationTask,
-    AgentResult,
-    EventType,
 )
-from app.schemas.evidence import Finding, EvidenceRecord, VerificationResult, VerificationState
-from app.orchestrator.planner import InvestigationPlanner
-from app.orchestrator.events import global_event_bus, EventBus
-from app.agents.base import SpecialistAgent
-from app.agents.ocean_research.agent import OceanResearchAgent
-from app.agents.marine_hazard.agent import MarineHazardAgent
-from app.agents.coastal_risk.agent import CoastalRiskAgent
-from app.agents.evidence_verification.agent import EvidenceVerificationAgent
-from app.core.logging import logger
 
 
 class OrchestratorService:
     """Coordinates specialist agents, event emission, verification, and result aggregation."""
 
-    def __init__(self, event_bus: Optional[EventBus] = None):
+    def __init__(self, event_bus: EventBus | None = None):
         self.event_bus = event_bus or global_event_bus
         self.planner = InvestigationPlanner()
-        
+
         # Agent registry
-        self.agents: Dict[str, SpecialistAgent] = {
+        self.agents: dict[str, SpecialistAgent] = {
             "ocean_research": OceanResearchAgent(),
             "marine_hazard": MarineHazardAgent(),
             "coastal_risk": CoastalRiskAgent(),
@@ -36,20 +40,24 @@ class OrchestratorService:
         self.verifier = EvidenceVerificationAgent()
 
         # In-memory store for investigations and their evidence pools
-        self._investigations: Dict[str, InvestigationResponse] = {}
-        self._evidence_pools: Dict[str, list[EvidenceRecord]] = {}
+        self._investigations: dict[str, InvestigationResponse] = {}
+        self._evidence_pools: dict[str, list[EvidenceRecord]] = {}
 
-    async def execute_investigation(self, request: InvestigationCreate) -> InvestigationResponse:
+    async def execute_investigation(
+        self, request: InvestigationCreate
+    ) -> InvestigationResponse:
         inv_id = f"inv-{uuid.uuid4().hex[:8]}"
-        created_at = datetime.now(timezone.utc)
+        created_at = datetime.now(UTC)
 
-        logger.info(f"Initiating investigation {inv_id} for workspace '{request.workspace}'")
+        logger.info(
+            f"Initiating investigation {inv_id} for workspace '{request.workspace}'"
+        )
 
         # 1. Event: Investigation started
         self.event_bus.emit(
             investigation_id=inv_id,
             event_type=EventType.INVESTIGATION_STARTED,
-            payload={"workspace": request.workspace, "query": request.query}
+            payload={"workspace": request.workspace, "query": request.query},
         )
 
         # 2. Plan specialist agents
@@ -59,7 +67,7 @@ class OrchestratorService:
             workspace=request.workspace,
             query=request.query,
             location=request.location,
-            time_window=request.time_window
+            time_window=request.time_window,
         )
 
         all_findings: list[Finding] = []
@@ -77,12 +85,12 @@ class OrchestratorService:
                 investigation_id=inv_id,
                 event_type=EventType.AGENT_STARTED,
                 agent_id=aid,
-                payload={"name": agent.name}
+                payload={"name": agent.name},
             )
 
             try:
                 result: AgentResult = await agent.run(task)
-                
+
                 # Register evidence
                 for ev in result.evidence:
                     all_evidence.append(ev)
@@ -90,7 +98,11 @@ class OrchestratorService:
                         investigation_id=inv_id,
                         event_type=EventType.EVIDENCE_ADDED,
                         agent_id=aid,
-                        payload={"evidence_id": ev.id, "source": ev.source_name, "dataset": ev.dataset_id}
+                        payload={
+                            "evidence_id": ev.id,
+                            "source": ev.source_name,
+                            "dataset": ev.dataset_id,
+                        },
                     )
 
                 all_findings.extend(result.findings)
@@ -100,16 +112,18 @@ class OrchestratorService:
                     investigation_id=inv_id,
                     event_type=EventType.AGENT_COMPLETED,
                     agent_id=aid,
-                    payload={"status": result.status.value, "findings_count": len(result.findings)}
+                    payload={
+                        "status": result.status.value,
+                        "findings_count": len(result.findings),
+                    },
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error(f"Error running agent {aid}: {e}")
-                all_limitations.append(f"Agent {aid} failed during execution: {str(e)}")
+                all_limitations.append(f"Agent {aid} failed during execution: {e!s}")
 
         # 4. Invoke Agent 4: Evidence & Scientific Verification
         verification_result: VerificationResult = self.verifier.verify_findings(
-            findings=all_findings,
-            evidence_pool=all_evidence
+            findings=all_findings, evidence_pool=all_evidence
         )
 
         if verification_result.overall_state == VerificationState.VERIFIED:
@@ -117,18 +131,21 @@ class OrchestratorService:
                 investigation_id=inv_id,
                 event_type=EventType.VERIFICATION_PASSED,
                 agent_id="evidence_verification",
-                payload={"verified_count": verification_result.verified_claims_count}
+                payload={"verified_count": verification_result.verified_claims_count},
             )
         else:
             self.event_bus.emit(
                 investigation_id=inv_id,
                 event_type=EventType.VERIFICATION_FAILED,
                 agent_id="evidence_verification",
-                payload={"state": verification_result.overall_state.value, "notes": verification_result.notes}
+                payload={
+                    "state": verification_result.overall_state.value,
+                    "notes": verification_result.notes,
+                },
             )
 
         # 5. Compile synthesis summary
-        completed_at = datetime.now(timezone.utc)
+        completed_at = datetime.now(UTC)
         summary = (
             f"Investigation for '{request.query}' completed across {len(agent_ids)} specialist agents. "
             f"Produced {len(all_findings)} scientific findings supported by {len(all_evidence)} verifiable evidence records. "
@@ -147,7 +164,7 @@ class OrchestratorService:
             verification_summary=verification_result,
             limitations=list(set(all_limitations)),
             created_at=created_at,
-            completed_at=completed_at
+            completed_at=completed_at,
         )
 
         self._investigations[inv_id] = response
@@ -157,12 +174,15 @@ class OrchestratorService:
         self.event_bus.emit(
             investigation_id=inv_id,
             event_type=EventType.INVESTIGATION_COMPLETED,
-            payload={"findings_count": len(all_findings), "evidence_count": len(all_evidence)}
+            payload={
+                "findings_count": len(all_findings),
+                "evidence_count": len(all_evidence),
+            },
         )
 
         return response
 
-    def get_investigation(self, investigation_id: str) -> Optional[InvestigationResponse]:
+    def get_investigation(self, investigation_id: str) -> InvestigationResponse | None:
         return self._investigations.get(investigation_id)
 
     def get_evidence(self, investigation_id: str) -> list[EvidenceRecord]:

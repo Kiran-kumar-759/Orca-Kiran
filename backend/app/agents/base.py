@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional
-from app.schemas.investigation import InvestigationTask, AgentResult
+
+from app.schemas.investigation import AgentResult, InvestigationTask
 
 
 class SpecialistAgent(ABC):
@@ -8,6 +8,7 @@ class SpecialistAgent(ABC):
     Mandatory base class for all four ORCA specialist agents.
     Every agent must expose this asynchronous run contract.
     """
+
     agent_id: str
     name: str
     description: str
@@ -18,4 +19,3 @@ class SpecialistAgent(ABC):
         Execute specialist analysis for the provided task.
         Must return an AgentResult complying with the shared contract.
         """
-        pass

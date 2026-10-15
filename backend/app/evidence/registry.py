@@ -1,6 +1,5 @@
-from typing import Optional
-from app.schemas.evidence import EvidenceRecord
 from app.core.logging import logger
+from app.schemas.evidence import EvidenceRecord
 
 
 class EvidenceRegistry:
@@ -18,7 +17,7 @@ class EvidenceRegistry:
         for r in records:
             self.register(r)
 
-    def get(self, evidence_id: str) -> Optional[EvidenceRecord]:
+    def get(self, evidence_id: str) -> EvidenceRecord | None:
         return self._records.get(evidence_id)
 
     def list_all(self) -> list[EvidenceRecord]:

@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional, List
+
+from app.schemas.evidence import VerificationResult
 from pydantic import BaseModel, Field
-from app.schemas.evidence import EvidenceRecord, Finding, VerificationResult
 
 
 class InvestigationReportResponse(BaseModel):
@@ -12,5 +12,5 @@ class InvestigationReportResponse(BaseModel):
     markdown_content: str
     findings_count: int
     evidence_count: int
-    verification_summary: Optional[VerificationResult] = None
-    limitations: List[str] = Field(default_factory=list)
+    verification_summary: VerificationResult | None = None
+    limitations: list[str] = Field(default_factory=list)

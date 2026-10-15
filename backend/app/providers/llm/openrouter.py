@@ -1,8 +1,6 @@
-from typing import Optional
 import httpx
-from app.providers.llm.base import LLMProvider
 from app.core.config import settings
-from app.core.logging import logger
+from app.providers.llm.base import LLMProvider
 
 
 class OpenRouterProvider(LLMProvider):
@@ -12,10 +10,7 @@ class OpenRouterProvider(LLMProvider):
         return bool(settings.OPENROUTER_API_KEY and settings.OPENROUTER_API_KEY.strip())
 
     async def generate_response(
-        self,
-        prompt: str,
-        system_prompt: Optional[str] = None,
-        temperature: float = 0.1
+        self, prompt: str, system_prompt: str | None = None, temperature: float = 0.1
     ) -> str:
         if not await self.is_configured():
             raise ValueError("OpenRouter API key is not configured.")
@@ -25,7 +20,7 @@ class OpenRouterProvider(LLMProvider):
             "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://github.com/orca-ocean/orca",
-            "X-Title": "ORCA Marine Intelligence"
+            "X-Title": "ORCA Marine Intelligence",
         }
         messages = []
         if system_prompt:
@@ -35,7 +30,7 @@ class OpenRouterProvider(LLMProvider):
         payload = {
             "model": "meta-llama/llama-3.3-70b-instruct",
             "messages": messages,
-            "temperature": temperature
+            "temperature": temperature,
         }
 
         async with httpx.AsyncClient(timeout=settings.LLM_TIMEOUT_SECONDS) as client:

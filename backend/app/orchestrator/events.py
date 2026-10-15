@@ -1,8 +1,9 @@
-from datetime import datetime, timezone
-from typing import Any, Optional
 import uuid
-from app.schemas.investigation import ExecutionEvent, EventType
+from datetime import UTC, datetime
+from typing import Any
+
 from app.core.logging import logger
+from app.schemas.investigation import EventType, ExecutionEvent
 
 
 class EventBus:
@@ -15,8 +16,8 @@ class EventBus:
         self,
         investigation_id: str,
         event_type: EventType,
-        agent_id: Optional[str] = None,
-        payload: Optional[dict[str, Any]] = None
+        agent_id: str | None = None,
+        payload: dict[str, Any] | None = None,
     ) -> ExecutionEvent:
         event = ExecutionEvent(
             id=f"evt-{uuid.uuid4().hex[:12]}",
@@ -24,7 +25,7 @@ class EventBus:
             agent_id=agent_id,
             event_type=event_type.value,
             payload=payload or {},
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(UTC),
         )
         if investigation_id not in self._events:
             self._events[investigation_id] = []

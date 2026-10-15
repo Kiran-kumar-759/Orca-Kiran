@@ -1,11 +1,9 @@
-from datetime import datetime, timezone
-import pytest
-from app.schemas.evidence import EvidenceRecord, Finding, VerificationState
+from datetime import UTC, datetime
+
+from app.schemas.evidence import EvidenceRecord, Finding
 from app.schemas.investigation import (
-    InvestigationTask,
-    AgentResult,
     AgentExecutionStatus,
-    LocationContext,
+    AgentResult,
 )
 
 
@@ -14,12 +12,12 @@ def test_evidence_record_validation():
         id="ev-test-01",
         dataset_id="open-meteo-marine",
         source_name="Open-Meteo API",
-        retrieval_time=datetime.now(timezone.utc),
+        retrieval_time=datetime.now(UTC),
         latitude=12.91,
         longitude=74.85,
         variable="sea_surface_temperature",
         value=28.5,
-        unit="°C"
+        unit="°C",
     )
     assert ev.id == "ev-test-01"
     assert ev.value == 28.5
@@ -33,7 +31,7 @@ def test_finding_with_evidence():
         value=28.5,
         unit="°C",
         evidence_ids=["ev-test-01"],
-        is_forecast=False
+        is_forecast=False,
     )
     assert f.evidence_ids == ["ev-test-01"]
     assert f.claim.startswith("SST")
@@ -46,7 +44,7 @@ def test_agent_result_schema():
         findings=[],
         evidence=[],
         limitations=["Testing limitation note."],
-        errors=[]
+        errors=[],
     )
     assert res.agent_id == "ocean_research"
     assert res.status == AgentExecutionStatus.COMPLETED
