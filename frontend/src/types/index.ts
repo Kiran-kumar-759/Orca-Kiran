@@ -97,6 +97,9 @@ export interface InvestigationResponse {
   limitations: string[];
   created_at: string;
   completed_at?: string;
+  provider_used?: string;
+  model_used?: string;
+  is_fallback?: boolean;
 }
 
 export interface InvestigationReportResponse {

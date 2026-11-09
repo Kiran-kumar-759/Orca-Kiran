@@ -95,3 +95,6 @@ class InvestigationResponse(BaseModel):
     limitations: list[str] = Field(default_factory=list)
     created_at: datetime
     completed_at: datetime | None = None
+    provider_used: str | None = None
+    model_used: str | None = None
+    is_fallback: bool = False

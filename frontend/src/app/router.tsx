@@ -5,6 +5,7 @@ import { MarineMonitoringWorkspace } from "../features/marine-monitoring/MarineM
 import { ProtectedAreasWorkspace } from "../features/protected-areas/ProtectedAreasWorkspace";
 import { CoastalAuthorityWorkspace } from "../features/coastal-authority/CoastalAuthorityWorkspace";
 import { DisasterManagementWorkspace } from "../features/disaster-management/DisasterManagementWorkspace";
+import { HazardDemoWorkspace } from "../features/hazard-demo/HazardDemoWorkspace";
 
 export const router = createBrowserRouter([
   {
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
       {
         path: "disaster-management",
         element: <DisasterManagementWorkspace />,
+      },
+      {
+        path: "hazard-demo",
+        element: <HazardDemoWorkspace />,
       },
       {
         path: "*",

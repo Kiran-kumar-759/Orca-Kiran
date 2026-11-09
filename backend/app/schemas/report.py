@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from app.schemas.evidence import VerificationResult
 from pydantic import BaseModel, Field
+
+from app.schemas.evidence import VerificationResult
 
 
 class InvestigationReportResponse(BaseModel):

@@ -27,17 +27,55 @@ class InvestigationPlanner:
         # If query contains explicit keywords, dynamically expand
         q = request.query.lower()
         if (
-            any(w in q for w in ["cyclone", "storm", "hurricane", "typhoon"])
+            any(
+                w in q
+                for w in [
+                    "cyclone",
+                    "storm",
+                    "hurricane",
+                    "typhoon",
+                    "hazard",
+                    "wave",
+                    "swell",
+                    "sea state",
+                    "rough sea",
+                    "rough",
+                    "fishing safety",
+                    "warning",
+                    "advisory",
+                ]
+            )
             and "marine_hazard" not in agents
         ):
             agents.append("marine_hazard")
         if (
-            any(w in q for w in ["population", "settlement", "infrastructure", "port"])
+            any(
+                w in q
+                for w in [
+                    "population",
+                    "settlement",
+                    "infrastructure",
+                    "port",
+                    "vulnerability",
+                    "exposure",
+                ]
+            )
             and "coastal_risk" not in agents
         ):
             agents.append("coastal_risk")
         if (
-            any(w in q for w in ["sst", "temperature", "wave", "chlorophyll"])
+            any(
+                w in q
+                for w in [
+                    "sst",
+                    "temperature",
+                    "chlorophyll",
+                    "salinity",
+                    "current",
+                    "upwelling",
+                    "anomaly",
+                ]
+            )
             and "ocean_research" not in agents
         ):
             agents.append("ocean_research")

@@ -1,8 +1,9 @@
 from collections.abc import Generator
 
-from app.core.config import settings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+
+from app.core.config import settings
 
 # Shared engine using Psycopg 3
 engine = create_engine(

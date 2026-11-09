@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
+from fastapi import APIRouter, HTTPException, status
+
 from app.orchestrator.service import global_orchestrator
 from app.schemas.report import InvestigationReportResponse
-from fastapi import APIRouter, HTTPException, status
 
 router = APIRouter(prefix="/investigations", tags=["Reports"])
 

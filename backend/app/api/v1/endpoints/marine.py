@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 
-from app.schemas.marine import MarineObservationListResponse, MarineObservationRead
 from fastapi import APIRouter, Query
+
+from app.schemas.marine import MarineObservationListResponse, MarineObservationRead
 
 router = APIRouter(prefix="/marine", tags=["Marine"])
 

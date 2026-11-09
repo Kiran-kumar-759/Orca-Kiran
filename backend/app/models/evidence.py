@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 
-from app.db.base import Base
 from sqlalchemy import (
     JSON,
     Column,
@@ -13,6 +12,8 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
 
 finding_evidence_link = Table(
     "finding_evidence_link",

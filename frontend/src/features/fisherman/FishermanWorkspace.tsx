@@ -75,12 +75,28 @@ export const FishermanWorkspace: React.FC = () => {
           </p>
         </div>
 
-        {investigation?.verification_summary && (
-          <div className="flex items-center space-x-2 bg-orca-dark/80 px-4 py-2.5 rounded-xl border border-orca-border">
-            <span className="text-xs text-orca-muted">Audit:</span>
-            <VerificationBadge state={investigation.verification_summary.overall_state} />
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {investigation?.provider_used && (
+            <div className="flex items-center space-x-1.5 bg-orca-dark/80 px-3 py-2 rounded-xl border border-orca-border text-xs">
+              {investigation.is_fallback ? (
+                <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-950/80 text-amber-300 border border-amber-800/80">
+                  Deterministic Rule Engine (Fallback)
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-800/80">
+                  AI: {investigation.provider_used} ({investigation.model_used || "default"})
+                </span>
+              )}
+            </div>
+          )}
+
+          {investigation?.verification_summary && (
+            <div className="flex items-center space-x-2 bg-orca-dark/80 px-4 py-2.5 rounded-xl border border-orca-border">
+              <span className="text-xs text-orca-muted">Audit:</span>
+              <VerificationBadge state={investigation.verification_summary.overall_state} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Query Bar */}
@@ -114,9 +130,13 @@ export const FishermanWorkspace: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           {investigation?.summary && (
-            <div className="p-4 rounded-xl border border-cyan-500/20 bg-cyan-950/20 text-xs text-cyan-200">
-              <span className="font-semibold block mb-1 text-cyan-300">Investigation Summary:</span>
-              {investigation.summary}
+            <div className="p-4 rounded-xl border border-cyan-500/20 bg-cyan-950/20 text-xs text-cyan-200 shadow-md">
+              <span className="font-semibold block mb-1 text-cyan-300 uppercase tracking-wider text-[11px]">
+                Investigation Intelligence Summary
+              </span>
+              <div className="whitespace-pre-wrap leading-relaxed mt-2 text-slate-100 font-sans text-xs">
+                {investigation.summary}
+              </div>
             </div>
           )}
           <FindingsList

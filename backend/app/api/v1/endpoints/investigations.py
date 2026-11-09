@@ -1,3 +1,6 @@
+from typing import Annotated
+
+from app.db.session import get_db
 from app.orchestrator.events import global_event_bus
 from app.orchestrator.service import global_orchestrator
 from app.schemas.evidence import EvidenceRecord
@@ -6,7 +9,8 @@ from app.schemas.investigation import (
     InvestigationCreate,
     InvestigationResponse,
 )
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/investigations", tags=["Investigations"])
 
@@ -14,12 +18,15 @@ router = APIRouter(prefix="/investigations", tags=["Investigations"])
 @router.post(
     "", response_model=InvestigationResponse, status_code=status.HTTP_201_CREATED
 )
-async def create_investigation(request: InvestigationCreate):
+async def create_investigation(
+    request: InvestigationCreate,
+    db: Annotated[Session, Depends(get_db)] = None,
+):
     """
     Submit a user query to execute an investigation across specialist agents.
     Triggers real orchestrator planning, execution, and scientific verification.
     """
-    response = await global_orchestrator.execute_investigation(request)
+    response = await global_orchestrator.execute_investigation(request, db=db)
     return response
 
 

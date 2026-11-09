@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 
-from app.core.config import settings
 from fastapi import APIRouter
+
+from app.core.config import settings
 
 router = APIRouter()
 

@@ -24,10 +24,25 @@ async def get_active_llm_provider() -> LLMProvider | None:
     return None
 
 
+async def get_ordered_llm_providers() -> list[LLMProvider]:
+    """
+    Returns all configured LLM providers in priority order:
+    1. Groq
+    2. Gemini
+    3. OpenRouter
+    """
+    configured = []
+    for provider in _providers:
+        if await provider.is_configured():
+            configured.append(provider)
+    return configured
+
+
 __all__ = [
     "GeminiProvider",
     "GroqProvider",
     "LLMProvider",
     "OpenRouterProvider",
     "get_active_llm_provider",
+    "get_ordered_llm_providers",
 ]
